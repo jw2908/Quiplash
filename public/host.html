@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Punch Bowl · Host</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    html, body { overflow: hidden; background-color: var(--ink); }
+    /* Everything is laid out on a fixed 1920x1080 stage and scaled to fit the screen. */
+    #stage {
+      position: absolute; left: 50%; top: 50%;
+      width: 1920px; height: 1080px;
+      transform-origin: center center;
+      background: var(--paper);
+      background-image: radial-gradient(rgba(27, 26, 46, 0.09) 2px, transparent 2px);
+      background-size: 30px 30px;
+      overflow: hidden;
+    }
+    .scene { position: absolute; inset: 0; padding: 60px 80px; display: flex; flex-direction: column; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; height: 90px; }
+    .topbar .logo { font-size: 44px; }
+    .pill { font-family: "Arial Black", Impact, sans-serif; font-size: 34px; background: #fff; border: 5px solid var(--ink); border-radius: 999px; padding: 6px 28px; box-shadow: 5px 5px 0 var(--ink); }
+    .timer { background: var(--sun); min-width: 140px; text-align: center; }
+    .timer.low { background: var(--tomato); color: #fff; }
+
+    /* Lobby */
+    #lobby .main { flex: 1; display: grid; grid-template-columns: 760px 1fr; gap: 60px; margin-top: 30px; }
+    .joinbox { display: flex; flex-direction: column; gap: 26px; }
+    .joinbox .how { font-size: 34px; font-weight: 800; line-height: 1.3; }
+    .joinbox .url { font-family: "Arial Black", Impact, sans-serif; font-size: 46px; color: var(--grape); word-break: break-all; }
+    .bigcode { font-family: "Arial Black", Impact, sans-serif; font-size: 190px; letter-spacing: 0.08em; line-height: 1; background: var(--sun); border: 8px solid var(--ink); border-radius: 30px; box-shadow: 12px 12px 0 var(--ink); text-align: center; padding: 20px 0 30px; transform: rotate(-2deg); }
+    .roster { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; align-content: start; }
+    .seat { height: 108px; border: 5px dashed rgba(27,26,46,0.3); border-radius: 22px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; color: rgba(27,26,46,0.4); }
+    .seat.filled { border: 5px solid var(--ink); color: #fff; box-shadow: 7px 7px 0 var(--ink); font-family: "Arial Black", Impact, sans-serif; font-size: 44px; text-shadow: 2px 2px 0 rgba(0,0,0,.3); animation: pop .4s ease-out both; }
+    .seat.off { opacity: .45; }
+    .seat .crown { margin-right: 12px; }
+    .lobby-actions { display: flex; gap: 30px; align-items: center; }
+    .lobby-actions button { font-size: 40px; padding: 22px 46px; }
+    .note { font-size: 28px; font-weight: 700; }
+
+    /* Intro */
+    #intro { align-items: center; justify-content: center; text-align: center; gap: 40px; }
+    #intro h1 { font-size: 200px; color: var(--tomato); -webkit-text-stroke: 6px var(--ink); text-shadow: 12px 12px 0 var(--ink); animation: pop .6s ease-out both; }
+    #intro p { font-size: 46px; font-weight: 800; max-width: 1400px; }
+    .mult { font-family: "Arial Black", Impact, sans-serif; font-size: 60px; background: var(--grape); color: #fff; border: 6px solid var(--ink); border-radius: 20px; padding: 6px 30px; box-shadow: 8px 8px 0 var(--ink); transform: rotate(3deg); }
+
+    /* Answering */
+    #answering .main, #finalAnswering .main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 50px; text-align: center; }
+    .shout { font-size: 96px; color: var(--ink); }
+    .sub { font-size: 40px; font-weight: 800; }
+    .status-row { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; max-width: 1700px; }
+    .status-row .sticker { font-size: 38px; padding: 12px 30px; }
+    .status-row .done { opacity: 1; }
+    .status-row .waiting { opacity: 0.35; filter: grayscale(0.6); }
+    .final-prompt-card { font-size: 60px; font-weight: 900; max-width: 1600px; line-height: 1.2; }
+
+    /* Voting / reveal */
+    .prompt-card { font-size: 58px; font-weight: 900; line-height: 1.15; text-align: center; margin: 20px auto 40px; max-width: 1650px; padding: 34px 50px; }
+    .duel { flex: 1; display: grid; grid-template-columns: 1fr 140px 1fr; align-items: center; }
+    .duel .vs { font-family: "Arial Black", Impact, sans-serif; font-size: 90px; text-align: center; color: var(--tomato); -webkit-text-stroke: 4px var(--ink); transform: rotate(-8deg); }
+    .answer { position: relative; min-height: 330px; display: flex; flex-direction: column; justify-content: center; font-size: 58px; font-weight: 900; line-height: 1.15; text-align: center; padding: 40px; border-width: 6px; box-shadow: 12px 12px 0 var(--ink); animation: pop .5s ease-out both; }
+    .answer.a { background: #ffe1d9; transform: rotate(-1.5deg); }
+    .answer.b { background: #d5f3ef; transform: rotate(1.5deg); animation-delay: .25s; }
+    .answer.loser { opacity: .55; }
+    .answer .author { position: absolute; bottom: -34px; left: 50%; transform: translateX(-50%); font-size: 38px; }
+    .answer .pts { position: absolute; top: -40px; right: -10px; font-size: 44px; background: var(--ink); color: var(--sun); }
+    .answer .voters { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 26px; }
+    .answer .voters .sticker { font-size: 24px; padding: 4px 16px; }
+    .stamp { position: absolute; top: 50%; left: 50%; font-family: "Arial Black", Impact, sans-serif; font-size: 130px; color: var(--tomato); border: 12px solid var(--tomato); border-radius: 20px; padding: 0 40px; background: rgba(255,255,255,.85); transform: translate(-50%, -50%) rotate(-12deg); animation: slam .45s ease-out both; pointer-events: none; }
+    .stamp-wrap { position: absolute; inset: 0; pointer-events: none; }
+    .stamp-wrap .stamp { animation-delay: .4s; }
+
+    /* Final voting / reveal */
+    .grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px 40px; align-content: center; }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .fanswer { position: relative; font-size: 38px; font-weight: 900; line-height: 1.2; text-align: center; min-height: 170px; display: flex; flex-direction: column; justify-content: center; padding: 44px 26px 26px; animation: pop .45s ease-out both; }
+    .fanswer:nth-child(odd) { transform: rotate(-1deg); }
+    .fanswer:nth-child(even) { transform: rotate(1deg); }
+    .fanswer .author { margin-top: 16px; font-size: 28px; align-self: center; }
+    .fanswer .pts { position: absolute; top: -28px; right: -10px; font-size: 32px; background: var(--ink); color: var(--sun); }
+    .fanswer.top { background: #fff6cc; border-color: var(--ink); box-shadow: 10px 10px 0 var(--tomato); }
+
+    /* Scores */
+    #scores .main, #gameover .main { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+    .bar-row { display: grid; grid-template-columns: 70px 300px 1fr 200px; align-items: center; gap: 24px; font-size: 40px; font-weight: 900; }
+    .bar-row .rank { font-family: "Arial Black", Impact, sans-serif; text-align: right; }
+    .bar-row .name { font-family: "Arial Black", Impact, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar { height: 56px; border: 5px solid var(--ink); border-radius: 14px; box-shadow: 5px 5px 0 var(--ink); transition: width 1.2s cubic-bezier(.2,.9,.3,1.2); min-width: 20px; }
+    .bar-row .score { font-family: "Arial Black", Impact, sans-serif; }
+    h2.section { font-size: 90px; text-align: center; margin-bottom: 20px; }
+    .winner { text-align: center; font-size: 150px; -webkit-text-stroke: 5px var(--ink); text-shadow: 12px 12px 0 var(--ink); animation: pop .7s ease-out both; }
+    .winner-sub { text-align: center; font-size: 48px; font-weight: 800; }
+    .end-actions { display: flex; justify-content: center; gap: 30px; margin-top: 30px; }
+    .end-actions button { font-size: 40px; padding: 22px 46px; }
+    .corner-skip { position: absolute; right: 80px; bottom: 50px; font-size: 26px; padding: 12px 24px; }
+
+    #connecting { align-items: center; justify-content: center; font-size: 60px; font-weight: 900; gap: 30px; text-align: center; }
+    #sound-hint { position: absolute; left: 80px; bottom: 40px; font-size: 24px; font-weight: 700; opacity: .6; }
+  </style>
+</head>
+<body>
+<div id="stage">
+  <section class="scene" id="connecting">
+    <div class="logo" style="font-size:120px"><span class="bowl">🥊</span><span><span class="word-a">Punch</span><br><span class="word-b">Bowl</span></span></div>
+    <div id="connecting-msg">Setting up a room…</div>
+  </section>
+
+  <section class="scene hidden" id="lobby">
+    <div class="topbar">
+      <div class="logo"><span class="bowl">🥊</span><span><span class="word-a">Punch</span> <span class="word-b">Bowl</span></span></div>
+      <div class="pill" id="lobby-count">0 / 10</div>
+    </div>
+    <div class="main">
+      <div class="joinbox">
+        <div class="how">Grab your phone and go to</div>
+        <div class="url" id="join-url"></div>
+        <div class="how">then enter the room code</div>
+        <div class="bigcode" id="room-code">····</div>
+        <div class="lobby-actions">
+          <button class="primary tv-focus" id="start-btn" disabled>Start game</button>
+          <div class="note" id="lobby-note">Need 3+ players</div>
+        </div>
+      </div>
+      <div>
+        <div class="roster" id="roster"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene hidden" id="intro">
+    <h1 id="intro-title"></h1>
+    <p id="intro-sub"></p>
+    <div class="mult" id="intro-mult"></div>
+  </section>
+
+  <section class="scene hidden" id="answering">
+    <div class="topbar">
+      <div class="logo"><span class="bowl">🥊</span><span id="answering-round" class="display"></span></div>
+      <div class="pill timer" id="answering-timer"></div>
+    </div>
+    <div class="main">
+      <h1 class="shout">Phones out! 📱</h1>
+      <div class="sub">Everyone's got two prompts. Each one is shared with a rival. Make yours funnier.</div>
+      <div class="status-row" id="answering-status"></div>
+    </div>
+    <button class="ghost corner-skip tv-focus" data-skip>Skip ⏭</button>
+  </section>
+
+  <section class="scene hidden" id="duel">
+    <div class="topbar">
+      <div class="logo"><span class="bowl">🥊</span><span id="duel-round" class="display"></span></div>
+      <div class="pill timer" id="duel-timer"></div>
+    </div>
+    <div class="card prompt-card" id="duel-prompt"></div>
+    <div class="duel">
+      <div class="card answer a" id="duel-a"></div>
+      <div class="vs">VS</div>
+      <div class="card answer b" id="duel-b"></div>
+    </div>
+    <div class="stamp-wrap" id="duel-stamp"></div>
+    <div class="sub" id="duel-foot" style="text-align:center;font-size:32px;margin-top:40px;"></div>
+    <button class="ghost corner-skip tv-focus" data-skip>Skip ⏭</button>
+  </section>
+
+  <section class="scene hidden" id="finalAnswering">
+    <div class="topbar">
+      <div class="logo"><span class="bowl">🥊</span><span class="display">The Last Laugh</span></div>
+      <div class="pill timer" id="finalAnswering-timer"></div>
+    </div>
+    <div class="main">
+      <div class="card final-prompt-card" id="final-prompt-a"></div>
+      <div class="sub">Everyone answers this one. Answer on your phone!</div>
+      <div class="status-row" id="final-status"></div>
+    </div>
+    <button class="ghost corner-skip tv-focus" data-skip>Skip ⏭</button>
+  </section>
+
+  <section class="scene hidden" id="finalBoard">
+    <div class="topbar">
+      <div class="logo"><span class="bowl">🥊</span><span class="display">The Last Laugh</span></div>
+      <div class="pill timer" id="finalBoard-timer"></div>
+    </div>
+    <div class="card prompt-card" id="final-prompt-b" style="margin-bottom:20px"></div>
+    <div class="grid" id="final-grid"></div>
+    <div class="sub" id="final-foot" style="text-align:center;font-size:32px;"></div>
+    <button class="ghost corner-skip tv-focus" data-skip>Skip ⏭</button>
+  </section>
+
+  <section class="scene hidden" id="scores">
+    <div class="topbar">
+      <div class="logo"><span class="bowl">🥊</span><span class="display" id="scores-title">Scores</span></div>
+    </div>
+    <div class="main">
+      <h2 class="section" id="scores-heading">The Scoreboard</h2>
+      <div id="scores-list"></div>
+    </div>
+  </section>
+
+  <section class="scene hidden" id="gameover">
+    <div class="main">
+      <div class="winner-sub">And the champion of the bowl is…</div>
+      <h1 class="winner" id="winner-name"></h1>
+      <div id="final-scores"></div>
+      <div class="end-actions">
+        <button class="primary tv-focus" id="again-btn">Play again</button>
+        <button class="ghost tv-focus" id="new-room-btn">New room</button>
+      </div>
+    </div>
+  </section>
+  <div id="sound-hint"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/host.js"></script>
+</body>
+</html>

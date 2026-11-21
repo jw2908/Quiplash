@@ -1,0 +1,19 @@
+{
+  "name": "punch-bowl",
+  "version": "1.0.0",
+  "description": "Punch Bowl: a free, original party game of witty answers. Host on a TV, play on phones.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/simulate.js"
+  },
+  "engines": { "node": ">=18" },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}

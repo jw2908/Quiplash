@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#fff3df">
+  <title>Punch Bowl</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { min-height: 100%; }
+    main { max-width: 520px; margin: 0 auto; padding: 18px 16px 40px; }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    header .logo { font-size: 1.5rem; }
+    #me { font-size: 0.95rem; }
+    .screen { display: flex; flex-direction: column; gap: 16px; }
+    label { font-weight: 800; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    #code { text-transform: uppercase; letter-spacing: 0.3em; font-family: "Arial Black", Impact, sans-serif; text-align: center; font-size: 1.8rem; }
+    #name { text-transform: uppercase; }
+    .error { color: #c0261b; font-weight: 800; min-height: 1.2em; }
+    .prompt { font-size: 1.35rem; font-weight: 800; line-height: 1.25; }
+    .tag { font-size: 0.85rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; color: var(--grape); }
+    .wait { text-align: center; padding: 40px 20px; font-size: 1.3rem; font-weight: 800; }
+    .wait .big { font-size: 3rem; display: block; margin-bottom: 10px; animation: wobble 1.6s ease-in-out infinite; }
+    .choice { text-align: left; text-transform: none; font-family: inherit; font-weight: 800; font-size: 1.2rem; background: #fff; padding: 18px; line-height: 1.25; width: 100%; position: relative; }
+    .choice.a { background: #ffe1d9; }
+    .choice.b { background: #d5f3ef; }
+    .choice[disabled] { opacity: 0.5; }
+    .choice .count { position: absolute; right: 10px; top: -12px; }
+    .vs { text-align: center; font-family: "Arial Black", Impact, sans-serif; font-size: 1.2rem; }
+    .row { display: flex; gap: 10px; }
+    .row > * { flex: 1; }
+    #timer { font-family: "Arial Black", Impact, sans-serif; font-size: 1rem; }
+    .counter { text-align: right; font-size: 0.9rem; font-weight: 800; }
+    .footer-link { text-align: center; margin-top: 30px; font-size: 0.95rem; }
+    .footer-link a { color: var(--ink); font-weight: 800; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="logo"><span class="bowl">🥊</span><span><span class="word-a">Punch</span> <span class="word-b">Bowl</span></span></div>
+    <div><span id="timer"></span> <span id="me"></span></div>
+  </header>
+
+  <!-- Join -->
+  <section id="s-join" class="screen">
+    <div class="card screen">
+      <label for="code">Room code</label>
+      <input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
+      <label for="name">Your name</label>
+      <input id="name" maxlength="12" autocomplete="off" spellcheck="false" placeholder="12 letters max">
+      <div class="error" id="join-error"></div>
+      <button class="primary" id="join-btn">Jump in</button>
+    </div>
+    <p class="footer-link">Got a TV or laptop? <a href="/host">Host a game on it →</a></p>
+  </section>
+
+  <!-- Lobby -->
+  <section id="s-lobby" class="screen hidden">
+    <div class="card wait">
+      <span class="big">🥊</span>
+      You're in! Look for your name on the big screen.
+    </div>
+    <div id="vip-box" class="card screen hidden">
+      <div class="tag">You're the boss</div>
+      <div>When everyone's in, start the game from here (or from the TV).</div>
+      <div id="lobby-count" class="muted"></div>
+      <button class="primary" id="start-btn">Everybody's in!</button>
+      <div class="error" id="start-error"></div>
+    </div>
+    <button class="ghost" id="leave-btn">Leave room</button>
+  </section>
+
+  <!-- Answer -->
+  <section id="s-answer" class="screen hidden">
+    <div class="card screen">
+      <div class="tag" id="answer-step"></div>
+      <div class="prompt" id="answer-prompt"></div>
+      <textarea id="answer-text" rows="3" maxlength="80" placeholder="Be funny. No pressure."></textarea>
+      <div class="counter"><span id="answer-count">0</span>/80</div>
+      <div class="error" id="answer-error"></div>
+      <button class="primary" id="answer-btn">Send it</button>
+    </div>
+  </section>
+
+  <!-- Vote -->
+  <section id="s-vote" class="screen hidden">
+    <div class="card screen">
+      <div class="tag">Which one's funnier?</div>
+      <div class="prompt" id="vote-prompt"></div>
+    </div>
+    <button class="choice a" id="vote-0"></button>
+    <div class="vs">VS</div>
+    <button class="choice b" id="vote-1"></button>
+  </section>
+
+  <!-- Final vote -->
+  <section id="s-final" class="screen hidden">
+    <div class="card screen">
+      <div class="tag">Hand out <span id="final-left">3</span> votes (stack them if you like)</div>
+      <div class="prompt" id="final-prompt"></div>
+    </div>
+    <div id="final-list" class="screen"></div>
+    <div class="row">
+      <button class="ghost" id="final-reset">Reset</button>
+      <button class="primary" id="final-send" disabled>Send votes</button>
+    </div>
+  </section>
+
+  <!-- Wait / look at the TV -->
+  <section id="s-wait" class="screen hidden">
+    <div class="card wait"><span class="big" id="wait-emoji">📺</span><span id="wait-msg">Eyes on the big screen!</span></div>
+    <div id="vip-controls" class="screen hidden">
+      <button class="ghost" id="skip-btn">Skip the timer</button>
+      <button class="primary hidden" id="again-btn">Play again</button>
+    </div>
+  </section>
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/play.js"></script>
+</body>
+</html>
